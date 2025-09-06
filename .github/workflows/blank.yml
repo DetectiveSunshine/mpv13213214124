@@ -1,0 +1,63 @@
+name: Build MPV Windows Release with LLVM
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows-llvm-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install MSYS2 and dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >
+            base-devel
+            git
+            mingw-w64-x86_64-clang
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-yasm
+            mingw-w64-x86_64-nasm
+            python3
+            pkg-config
+
+      - name: Set MSYS2 environment
+        shell: bash
+        run: |
+          export PATH="/c/msys64/mingw64/bin:$PATH"
+          pacman -Syu --noconfirm
+
+      - name: Build MPV (Release, LLVM)
+        shell: bash
+        run: |
+          git clone https://github.com/mpv-player/mpv.git mpv-src
+          cd mpv-src
+          ./bootstrap.py
+          ./waf configure \
+            CC=clang CXX=clang++ \
+            --enable-static-build \
+            --disable-debug \
+            --enable-optimize=3 \
+            --disable-dependency-tracking
+          ./waf build
+          ./waf install --destdir=install
+
+      - name: Strip binaries
+        shell: bash
+        run: |
+          cd mpv-src/install/bin
+          for f in *.exe; do
+            strip "$f"
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: mpv-windows-llvm-release
+          path: mpv-src/install
