@@ -1,7 +1,7 @@
 name: Build MPV Windows Release with LLVM
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # manual trigger only
 
 jobs:
   build-windows-llvm-release:
@@ -9,9 +9,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install MSYS2 and dependencies
+      - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
           update: true
@@ -25,14 +25,8 @@ jobs:
             python3
             pkg-config
 
-      - name: Set MSYS2 environment
-        shell: bash
-        run: |
-          export PATH="/c/msys64/mingw64/bin:$PATH"
-          pacman -Syu --noconfirm
-
       - name: Build MPV (Release, LLVM)
-        shell: bash
+        shell: msys2 {0}
         run: |
           git clone https://github.com/mpv-player/mpv.git mpv-src
           cd mpv-src
@@ -47,7 +41,7 @@ jobs:
           ./waf install --destdir=install
 
       - name: Strip binaries
-        shell: bash
+        shell: msys2 {0}
         run: |
           cd mpv-src/install/bin
           for f in *.exe; do
